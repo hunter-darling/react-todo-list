@@ -1,21 +1,32 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
+import { NewTodoForm } from "./NewTodoForm";
+import { TodoList } from "./TodoList";
 
 export default function App() {
-  const [newItem, setNewItem] = useState("");
-  // ^^ Destructing format, JS concept, not React-specific
-  // setNewItem("something") <- would cause an infinite loop of re-rendering
-  const [todos, setTodos] = useState([]);
+  const [todos, setTodos] = useState(() => {
+    const localValue = localStorage.getItem("ITEMS");
+    if (localValue == null) {
+      return [];
+    } else {
+      return JSON.parse(localValue);
+    }
+  });
 
-  function handleSubmit(e) {
-    e.preventDefault();
+  // Persists in local storage
+  // Every time we modify the todos, function runs and saves the new value in local storage
+  // This hook (and all hooks) cannot be called conditionally
+  useEffect(() => {
+    localStorage.setItem("ITEMS", JSON.stringify(todos));
+  }, [todos]);
+
+  function addTodo(title) {
     setTodos((currentTodos) => {
       return [
         ...currentTodos,
-        { id: crypto.randomUUID(), title: newItem, completed: false },
+        { id: crypto.randomUUID(), title, completed: false },
       ];
     });
-    setNewItem("");
   }
 
   function toggleTodo(id, completed) {
@@ -37,42 +48,9 @@ export default function App() {
 
   return (
     <>
-      <form className="new-item-form" onSubmit={handleSubmit}>
-        <div className="form-row">
-          <label htmlFor="item">New Item</label>
-          <input
-            value={newItem}
-            onChange={(e) => setNewItem(e.target.value)}
-            type="text"
-            id="item"
-          />
-        </div>
-        <button className="btn">Add</button>
-      </form>
+      <NewTodoForm onSubmit={addTodo} />
       <h1 className="header">To-Do List</h1>
-      <ul className="list">
-        {todos.map((todo) => {
-          return (
-            // key tells React which element is being acted on
-            <li key={todo.id}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={todo.completed}
-                  onChange={(e) => toggleTodo(todo.id, e.target.checked)}
-                />
-                {todo.title}
-              </label>
-              <button
-                className="btn btn-danger"
-                onClick={() => deleteTodo(todo.id)}
-              >
-                Delete
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      <TodoList todos={todos} toggleTodo={toggleTodo} deleteTodo={deleteTodo} />
     </>
   );
 }
